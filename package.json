@@ -21,7 +21,7 @@
 		"url": "https://github.com/DoctorMcKay/node-steamcommunity.git"
 	},
 	"dependencies": {
-		"async": "^3.2.3",
+		"async": "^3.2.4",
 		"cheerio": "^1.0.0-rc.11",
 		"image-size": "^0.8.2",
 		"node-bignumber": "^1.2.1",
