@@ -522,7 +522,8 @@ SteamCommunity.prototype.getUserInventoryContents = function(userID, appID, cont
 		self.httpRequest({
 			"uri": "https://steamcommunity.com/inventory/" + userID.getSteamID64() + "/" + appID + "/" + contextID,
 			"headers": {
-				"Referer": "https://steamcommunity.com/profiles/" + userID.getSteamID64() + "/inventory"
+				"Referer": "https://steamcommunity.com/profiles/" + userID.getSteamID64() + "/inventory",
+				"User-Agent": "axios/0.26.1"
 			},
 			"qs": {
 				"l": language, // Default language
