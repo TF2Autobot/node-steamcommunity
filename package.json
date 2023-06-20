@@ -28,7 +28,7 @@
 		"request": "^2.88.2",
 		"steam-totp": "^2.1.2",
 		"steamid": "^2.0.0",
-		"xml2js": "^0.4.22"
+		"xml2js": "^0.6.0"
 	},
 	"engines": {
 		"node": ">=4.0.0"
