@@ -123,7 +123,7 @@ SteamCommunity.prototype.login = function(details, callback) {
 			"donotcache": Date.now()
 		};
 
-		if(!disableMobile){
+		if (!disableMobile) {
 			formObj.oauth_client_id = "DE45CD61";
 			formObj.oauth_scope = "read_profile write_profile read_client write_client";
 			formObj.loginfriendlyname = "#login_emailauth_friendlyname_mobile";
@@ -170,12 +170,12 @@ SteamCommunity.prototype.login = function(details, callback) {
 					return cookie.trim();
 				});
 
-				if (!disableMobile && body.oauth){
+				if (!disableMobile && body.oauth) {
 					oAuth = JSON.parse(body.oauth);
 					self.steamID = new SteamID(oAuth.steamid);
 					self.oAuthToken = oAuth.oauth_token;
 				} else {
-					for (var i = 0; i < cookies.length; i++) {
+					for(var i = 0; i < cookies.length; i++) {
 						var parts = cookies[i].split('=');
 						if(parts[0] == 'steamLogin') {
 							self.steamID = new SteamID(decodeURIComponent(parts[1]).split('||')[0])
@@ -188,7 +188,7 @@ SteamCommunity.prototype.login = function(details, callback) {
 
 				// Find the Steam Guard cookie
 				var steamguard = null;
-				for(var i = 0; i < cookies.length; i++) {
+				for (var i = 0; i < cookies.length; i++) {
 					var parts = cookies[i].split('=');
 					if(parts[0] == 'steamMachineAuth' + self.steamID) {
 						steamguard = self.steamID.toString() + '||' + decodeURIComponent(parts[1]);
@@ -214,6 +214,12 @@ SteamCommunity.prototype.login = function(details, callback) {
 	}
 };
 
+/**
+ * @deprecated
+ * @param {string} steamguard
+ * @param {string} token
+ * @param {function} callback
+ */
 SteamCommunity.prototype.oAuthLogin = function(steamguard, token, callback) {
 	steamguard = steamguard.split('||');
 	var steamID = new SteamID(steamguard[0]);
@@ -300,6 +306,10 @@ SteamCommunity.prototype.setCookies = function(cookies) {
 
 		this._setCookie(Request.cookie(cookie), !!(cookieName.match(/^steamMachineAuth/) || cookieName.match(/Secure$/)));
 	});
+
+	// The account we're logged in as might have changed, so verify that our mobile access token (if any) is still valid
+	// for this account.
+	this._verifyMobileAccessToken();
 };
 
 SteamCommunity.prototype.getSessionID = function(host = "http://steamcommunity.com") {
