@@ -65,7 +65,7 @@ SteamCommunity.prototype.login = function(details, callback) {
 		this._setCookie(Request.cookie('steamMachineAuth' + parts[0] + '=' + encodeURIComponent(parts[1])), true);
 	}
 
-	var disableMobile = details.disableMobile;
+	var disableMobile = typeof details.disableMobile == 'undefined' ? true : details.disableMobile;
 
 	var self = this;
 
@@ -161,23 +161,21 @@ SteamCommunity.prototype.login = function(details, callback) {
 				callback(error);
 			} else if (!body.success) {
 				callback(new Error(body.message || "Unknown error"));
-			} else if (!disableMobile && !body.oauth) {
-				callback(new Error("Malformed response"));
 			} else {
 				var sessionID = generateSessionID();
-				var oAuth;
+				var oAuth = {};
 				self._setCookie(Request.cookie('sessionid=' + sessionID));
 
 				var cookies = self._jar.getCookieString("https://steamcommunity.com").split(';').map(function(cookie) {
 					return cookie.trim();
 				});
 
-				if (!disableMobile){
+				if (!disableMobile && body.oauth){
 					oAuth = JSON.parse(body.oauth);
 					self.steamID = new SteamID(oAuth.steamid);
 					self.oAuthToken = oAuth.oauth_token;
-				}else{
-					for(var i = 0; i < cookies.length; i++) {
+				} else {
+					for (var i = 0; i < cookies.length; i++) {
 						var parts = cookies[i].split('=');
 						if(parts[0] == 'steamLogin') {
 							self.steamID = new SteamID(decodeURIComponent(parts[1]).split('||')[0])
