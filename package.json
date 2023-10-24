@@ -2,6 +2,13 @@
 	"name": "@tf2autobot/steamcommunity",
 	"version": "3.47.0",
 	"description": "Provides an interface for logging into and interacting with the Steam Community website",
+	"files": [
+		"/classes",
+		"/components",
+		"/examples",
+		"/resources",
+		"/index.js"
+	],
 	"keywords": [
 		"steam",
 		"steam community"
@@ -28,7 +35,7 @@
 		"request": "^2.88.2",
 		"steam-totp": "^2.1.2",
 		"steamid": "^2.0.0",
-		"xml2js": "^0.6.0"
+		"xml2js": "^0.6.2"
 	},
 	"engines": {
 		"node": ">=4.0.0"
