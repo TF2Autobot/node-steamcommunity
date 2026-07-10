@@ -3,6 +3,7 @@ const SteamID = require('steamid');
 const xml2js  = require('xml2js');
 
 const EResult = require('../resources/EResult.js');
+const ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
 
 exports.isSteamID = function(input) {
 	var keys = Object.keys(input);
@@ -83,7 +84,12 @@ exports.resolveVanityURL = function(url, callback) {
 	}
 
 	// Make request to get XML data
-	request(url + "/?xml=1", function(err, response, body) {
+	request({
+		uri: url + "/?xml=1",
+		headers: {
+			"accept-language": ACCEPT_LANGUAGE
+		}
+	}, function(err, response, body) {
 		if (err) {
 			callback(err);
 			return;
