@@ -274,7 +274,7 @@ SteamCommunity.prototype._setCookie = function(cookie, secure) {
 	cookie.secure = !!secure;
 
 	if (cookie.domain) {
-		this._jar.setCookieSync(cookie.clone(), protocol + cookie.domain);
+		this._jar.setCookieSync(cookie.clone(), protocol + '://' + cookie.domain);
 	} else {
 		// tough-cookie uses setCookieSync for immediate, synchronous saves
         // We clone it to safely apply the same cookie across Steam's 3 domains
