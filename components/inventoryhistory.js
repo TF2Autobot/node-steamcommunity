@@ -2,7 +2,6 @@ var SteamCommunity = require('../index.js');
 var CEconItem = require('../classes/CEconItem.js');
 var Helpers = require('./helpers.js');
 var SteamID = require('steamid');
-var request = require('request');
 var Cheerio = require('cheerio');
 var Async = require('async');
 

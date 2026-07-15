@@ -1,4 +1,3 @@
-const request = require('request');
 const SteamID = require('steamid');
 const xml2js  = require('xml2js');
 
@@ -77,42 +76,46 @@ exports.decodeJwt = function(jwt) {
  * @param {String} url - Full steamcommunity profile URL or only the vanity part.
  * @param {Object} callback - First argument is null/Error, second is object containing vanityURL (String) and steamID (String)
  */
-exports.resolveVanityURL = function(url, callback) {
+exports.resolveVanityURL = async function(url, callback) {
 	// Precede url param if only the vanity was provided
 	if (!url.includes("steamcommunity.com")) {
 		url = "https://steamcommunity.com/id/" + url;
 	}
 
-	// Make request to get XML data
-	request({
-		uri: url + "/?xml=1",
-		headers: {
-			"accept-language": ACCEPT_LANGUAGE
-		}
-	}, function(err, response, body) {
-		if (err) {
-			callback(err);
-			return;
-		}
+	try {
+		// 1. Use native fetch to grab the XML profile data
+        const response = await fetch(url + "/?xml=1", {
+            headers: {
+                "accept-language": ACCEPT_LANGUAGE
+            }
+        });
+        
+        // 2. Extract raw XML string text
+        const body = await response.text();
 
-		// Parse XML data returned from Steam into an object
-		new xml2js.Parser().parseString(body, (err, parsed) => {
-			if (err) {
-				callback(new Error("Couldn't parse XML response"));
-				return;
-			}
+        // 3. Parse XML data returned from Steam into an object
+        new xml2js.Parser().parseString(body, (err, parsed) => {
+            if (err) {
+                callback(new Error("Couldn't parse XML response"));
+                return;
+            }
 
-			if (parsed.response && parsed.response.error) {
-				callback(new Error("Couldn't find Steam ID"));
-				return;
-			}
+            if (parsed.response && parsed.response.error) {
+                callback(new Error("Couldn't find Steam ID"));
+                return;
+            }
 
-			let steamID64 = parsed.profile.steamID64[0];
-			let vanityURL = parsed.profile.customURL[0];
+            let steamID64 = parsed.profile.steamID64[0];
+            let vanityURL = parsed.profile.customURL[0];
 
-			callback(null, {"vanityURL": vanityURL, "steamID": steamID64});
-		});
-	});
+            callback(null, {"vanityURL": vanityURL, "steamID": steamID64});
+        });
+	} catch (err) {
+		// Catch network errors or fetch rejections and pass them cleanly to the callback
+        if (callback) {
+            callback(err);
+        }
+	}
 };
 
 /**
