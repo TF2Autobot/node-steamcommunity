@@ -85,7 +85,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
         method: options.method || 'GET',
         // Merge the global defaults (User-Agent) with the specific request headers
         headers: mergedHeaders,
-        redirect: 'follow'
+        redirect: options.followRedirect === false ? 'manual' : 'follow'
     };
 
     // 2. Handle Timeouts via AbortController
