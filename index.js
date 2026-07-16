@@ -45,8 +45,12 @@ function SteamCommunity(options) {
 		defaults.localAddress = options.localAddress;
 	}
 
-	this._requestDefaults = options.fetch || defaults; // breaking change, but not for tf2autobot
-	this.request = this._httpRequest.bind(this);
+	if (options.request) {
+		this.request = options.request.defaults(defaults);
+	} else {
+		this._requestDefaults = options.fetch || defaults;
+		this.request = this._httpRequest.bind(this);
+	}
 
 	// English
 	this._setCookie(Cookie.parse('Steam_Language=english'));
@@ -165,6 +169,11 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
         }
     } catch (err) {
         clearTimeout(timeoutId);
+
+        if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+            err.code = 'ETIMEDOUT';
+        }
+
         if (callback) {
             // Replicate request's abort error format
             callback(err, null, null);
