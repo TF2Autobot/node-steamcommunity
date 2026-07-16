@@ -73,10 +73,18 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
         }
     }
 
+	// Use native Headers to ensure case-insensitive overriding
+    const mergedHeaders = new Headers(this._requestDefaults.headers || {});
+    if (options.headers) {
+        for (const [key, value] of Object.entries(options.headers)) {
+            mergedHeaders.set(key, value); // .set() perfectly overwrites 'User-Agent' with 'user-agent'
+        }
+    }
+
     let config = {
         method: options.method || 'GET',
         // Merge the global defaults (User-Agent) with the specific request headers
-        headers: { ...(this._requestDefaults.headers || {}), ...(options.headers || {}) },
+        headers: mergedHeaders,
         redirect: 'follow'
     };
 
