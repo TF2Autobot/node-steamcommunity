@@ -1,6 +1,7 @@
 const {chrome} = require('@doctormckay/user-agents');
-const Request = require('request');
 const SteamID = require('steamid');
+const { CookieJar, Cookie } = require('tough-cookie');
+const fetchCookie = require('fetch-cookie').default;
 
 const Helpers = require('./components/helpers.js');
 
@@ -18,7 +19,8 @@ SteamCommunity.EFriendRelationship = require('./resources/EFriendRelationship.js
 function SteamCommunity(options) {
 	options = options || {};
 
-	this._jar = Request.jar();
+	this._jar = new CookieJar();
+	this._fetch = fetchCookie(fetch, this._jar);
 	this._captchaGid = -1;
 	this._httpRequestID = 0;
 	this.chatState = SteamCommunity.ChatState.Offline;
@@ -43,15 +45,141 @@ function SteamCommunity(options) {
 		defaults.localAddress = options.localAddress;
 	}
 
-	this.request = options.request || Request.defaults({"forever": true}); // "forever" indicates that we want a keep-alive agent
-	this.request = this.request.defaults(defaults);
+	if (options.request) {
+		this.request = options.request.defaults(defaults);
+	} else {
+		this._requestDefaults = options.fetch || defaults;
+		this.request = this._httpRequest.bind(this);
+	}
 
 	// English
-	this._setCookie(Request.cookie('Steam_Language=english'));
+	this._setCookie(Cookie.parse('Steam_Language=english'));
 
 	// UTC
-	this._setCookie(Request.cookie('timezoneOffset=0,0'));
+	this._setCookie(Cookie.parse('timezoneOffset=0,0'));
 }
+
+SteamCommunity.prototype._httpRequest = async function(options, callback) {
+    if (typeof options === 'string') {
+        options = { url: options };
+    }
+
+    const url = new URL(options.url || options.uri);
+
+    // 1. Handle Query Parameters (request's 'qs')
+    if (options.qs) {
+        for (const key in options.qs) {
+            url.searchParams.append(key, options.qs[key]);
+        }
+    }
+
+    let config = {
+        method: options.method || 'GET',
+        // Merge the global defaults (User-Agent) with the specific request headers
+        headers: { ...(this._requestDefaults.headers || {}), ...(options.headers || {}) },
+        redirect: 'follow'
+    };
+
+    // 2. Handle Timeouts via AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), options.timeout || 50000);
+    config.signal = controller.signal;
+
+    // 3. Handle JSON Request payloads
+    if (options.json) {
+        config.headers['Accept'] = 'application/json';
+        if (options.body) {
+            config.headers['Content-Type'] = 'application/json';
+            config.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+        }
+    }
+
+    // 4. Handle standard Form URL-Encoded data
+    if (options.form) {
+        const params = new URLSearchParams();
+        for (const key in options.form) {
+            params.append(key, options.form[key]);
+        }
+        config.body = params;
+    }
+
+    // 5. Handle Multipart Form Data (Avatars/Images)
+    if (options.formData) {
+        const formData = new FormData(); // Built into Node 18+
+        for (const key in options.formData) {
+            let item = options.formData[key];
+            
+            // request module allowed custom file formats: { value: Buffer, options: { filename, contentType } }
+            if (item && item.value && Buffer.isBuffer(item.value)) {
+                const blob = new Blob([item.value], { type: item.options?.contentType || 'application/octet-stream' });
+                formData.append(key, blob, item.options?.filename || 'file.bin');
+            } else if (Buffer.isBuffer(item)) {
+                formData.append(key, new Blob([item]));
+            } else {
+                formData.append(key, item);
+            }
+        }
+        config.body = formData;
+        // Native fetch automatically sets the correct multipart Content-Type header with boundaries
+    }
+
+    // 6. Handle plain text/raw body
+    if (!options.json && !options.form && !options.formData && options.body) {
+        config.body = options.body;
+    }
+
+    // 7. Execute Native Fetch
+    try {
+        const response = await this._fetch(url.toString(), config);
+        clearTimeout(timeoutId); // Clear timeout on success
+
+        // Reconstruct the response object expected by node-steamcommunity
+        const res = {
+            statusCode: response.status,
+            headers: Object.fromEntries(response.headers.entries()),
+            request: {
+                uri: { href: response.url }
+            }
+        };
+
+        let body;
+
+        // 8. Handle Response parsing
+        if (options.encoding === null) {
+            // Steam Captchas & images require raw Buffers
+            const arrayBuffer = await response.arrayBuffer();
+            body = Buffer.from(arrayBuffer); 
+        } else {
+            const text = await response.text();
+            if (options.json) {
+                try {
+                    body = text ? JSON.parse(text) : null;
+                } catch (e) {
+                    body = text; // Fallback to raw text if parsing fails
+                }
+            } else {
+                body = text;
+            }
+        }
+        
+        res.body = body;
+
+        if (callback) {
+            callback(null, res, body);
+        }
+    } catch (err) {
+        clearTimeout(timeoutId);
+
+        if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+            err.code = 'ETIMEDOUT';
+        }
+
+        if (callback) {
+            // Replicate request's abort error format
+            callback(err, null, null);
+        }
+    }
+};
 
 SteamCommunity.prototype.login = function(details, callback) {
 	if (!details.accountName || !details.password) {
@@ -151,15 +279,17 @@ SteamCommunity.prototype.getClientLogonToken = function(callback) {
 };
 
 SteamCommunity.prototype._setCookie = function(cookie, secure) {
-	var protocol = secure ? "https" : "http";
+	const protocol = secure ? "https" : "http";
 	cookie.secure = !!secure;
 
 	if (cookie.domain) {
-		this._jar.setCookie(cookie.clone(), protocol + '://' + cookie.domain);
+		this._jar.setCookieSync(cookie.clone(), protocol + '://' + cookie.domain);
 	} else {
-		this._jar.setCookie(cookie.clone(), protocol + "://steamcommunity.com");
-		this._jar.setCookie(cookie.clone(), protocol + "://store.steampowered.com");
-		this._jar.setCookie(cookie.clone(), protocol + "://help.steampowered.com");
+		// tough-cookie uses setCookieSync for immediate, synchronous saves
+        // We clone it to safely apply the same cookie across Steam's 3 domains
+		this._jar.setCookieSync(cookie.clone(), protocol + "://steamcommunity.com");
+		this._jar.setCookieSync(cookie.clone(), protocol + "://store.steampowered.com");
+		this._jar.setCookieSync(cookie.clone(), protocol + "://help.steampowered.com");
 	}
 };
 
@@ -170,7 +300,7 @@ SteamCommunity.prototype.setCookies = function(cookies) {
 			this.steamID = new SteamID(cookie.match(/steamLogin(Secure)?=(\d+)/)[2]);
 		}
 
-		this._setCookie(Request.cookie(cookie), !!(cookieName.match(/^steamMachineAuth/) || cookieName.match(/Secure$/)));
+		this._setCookie(Cookie.parse(cookie), !!(cookieName.match(/^steamMachineAuth/) || cookieName.match(/Secure$/)));
 	});
 
 	// The account we're logged in as might have changed, so verify that our mobile access token (if any) is still valid
@@ -179,16 +309,16 @@ SteamCommunity.prototype.setCookies = function(cookies) {
 };
 
 SteamCommunity.prototype.getSessionID = function(host = "http://steamcommunity.com") {
-	var cookies = this._jar.getCookieString(host).split(';');
+	var cookies = this._jar.getCookieStringSync(host).split(';');
 	for(var i = 0; i < cookies.length; i++) {
 		var match = cookies[i].trim().match(/([^=]+)=(.+)/);
-		if(match[1] == 'sessionid') {
+		if(match && match[1] == 'sessionid') {
 			return decodeURIComponent(match[2]);
 		}
 	}
 
 	var sessionID = generateSessionID();
-	this._setCookie(Request.cookie('sessionid=' + sessionID));
+	this._setCookie(Cookie.parse('sessionid=' + sessionID));
 	return sessionID;
 };
 
