@@ -1,7 +1,8 @@
 const {chrome} = require('@doctormckay/user-agents');
 const SteamID = require('steamid');
 const { CookieJar, Cookie } = require('tough-cookie');
-const fetchCookie = require('fetch-cookie').default;
+const fetchCookieModule = require('fetch-cookie');
+const fetchCookie = fetchCookieModule.default || fetchCookieModule;
 
 const Helpers = require('./components/helpers.js');
 
