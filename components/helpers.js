@@ -89,6 +89,10 @@ exports.resolveVanityURL = async function(url, callback) {
                 "Accept-Language": ACCEPT_LANGUAGE
             }
         });
+
+		if (!response.ok) {
+			throw new Error(`Failed to resolve vanity URL: ${response.status} ${response.statusText}`);
+		}
         
         // 2. Extract raw XML string text
         const body = await response.text();
