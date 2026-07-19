@@ -30,7 +30,8 @@ function SteamCommunity(options) {
 		"timeout": options.timeout || 50000,
 		"gzip": true,
 		"headers": {
-			"User-Agent": options.userAgent || chrome()
+			"User-Agent": options.userAgent || chrome(),
+			'Accept-Language': 'en-US,en;q=0.9',
 		}
 	};
 
@@ -95,12 +96,16 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
 
     // 3. Handle JSON Request payloads
     if (options.json) {
-        config.headers['Accept'] = 'application/json';
-        if (options.body) {
-            config.headers['Content-Type'] = 'application/json';
-            config.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
-        }
-    }
+    	config.headers.set('Accept', 'application/json');
+    
+    	// Check if options.json is an object (payload) rather than just a boolean
+    	const payload = options.body || (typeof options.json !== 'boolean' ? options.json : null);
+    
+    	if (payload) {
+        	config.headers.set('Content-Type', 'application/json');
+        	config.body = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    	}
+	}
 
     // 4. Handle standard Form URL-Encoded data
     if (options.form) {
@@ -146,7 +151,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
             statusCode: response.status,
             headers: Object.fromEntries(response.headers.entries()),
             request: {
-                uri: { href: response.url }
+                uri: new URL(response.url)
             }
         };
 

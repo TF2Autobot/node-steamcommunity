@@ -86,7 +86,7 @@ exports.resolveVanityURL = async function(url, callback) {
 		// 1. Use native fetch to grab the XML profile data
         const response = await fetch(url + "/?xml=1", {
             headers: {
-                "accept-language": ACCEPT_LANGUAGE
+                "Accept-Language": ACCEPT_LANGUAGE
             }
         });
         
