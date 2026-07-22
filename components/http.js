@@ -103,7 +103,7 @@ SteamCommunity.prototype._checkHttpError = function(err, response, callback, bod
 		return err;
 	}
 
-	if (response.statusCode >= 300 && response.statusCode <= 399 && response.headers.location.indexOf('/login') != -1) {
+	if (response.statusCode >= 300 && response.statusCode <= 399 && response.headers.location && response.headers.location.indexOf('/login') != -1) {
 		err = new Error("Not Logged In");
 		callback(err, response, body);
 		this._notifySessionExpired(err);

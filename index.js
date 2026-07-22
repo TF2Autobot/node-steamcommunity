@@ -1,4 +1,4 @@
-const {chrome} = require('@doctormckay/user-agents');
+const { chrome } = require('@doctormckay/user-agents');
 const SteamID = require('steamid');
 const { CookieJar, Cookie } = require('tough-cookie');
 const fetchCookieModule = require('fetch-cookie');
@@ -16,7 +16,6 @@ SteamCommunity.EResult = require('./resources/EResult.js');
 SteamCommunity.ESharedFileType = require('./resources/ESharedFileType.js');
 SteamCommunity.EFriendRelationship = require('./resources/EFriendRelationship.js');
 
-
 function SteamCommunity(options) {
 	options = options || {};
 
@@ -31,8 +30,7 @@ function SteamCommunity(options) {
 		"timeout": options.timeout || 50000,
 		"gzip": true,
 		"headers": {
-			"User-Agent": options.userAgent || chrome(),
-			'Accept-Language': 'en-US,en;q=0.9',
+			"User-Agent": options.userAgent || chrome()
 		}
 	};
 
@@ -71,7 +69,9 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
     // 1. Handle Query Parameters (request's 'qs')
     if (options.qs) {
         for (const key in options.qs) {
-            url.searchParams.append(key, options.qs[key]);
+        	if (options.qs[key] !== undefined && options.qs[key] !== null) {
+            	url.searchParams.append(key, String(options.qs[key]));
+        	}
         }
     }
 
@@ -85,7 +85,6 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
 
     let config = {
         method: options.method || 'GET',
-        // Merge the global defaults (User-Agent) with the specific request headers
         headers: mergedHeaders,
         redirect: options.followRedirect === false ? 'manual' : 'follow'
     };
@@ -119,7 +118,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
 
     // 5. Handle Multipart Form Data (Avatars/Images)
     if (options.formData) {
-        const formData = new FormData(); // Built into Node 18+
+    	const formData = new FormData();
         for (const key in options.formData) {
             let item = options.formData[key];
             
@@ -134,7 +133,6 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
             }
         }
         config.body = formData;
-        // Native fetch automatically sets the correct multipart Content-Type header with boundaries
     }
 
     // 6. Handle plain text/raw body
@@ -147,7 +145,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
         const response = await this._fetch(url.toString(), config);
         clearTimeout(timeoutId); // Clear timeout on success
 
-        // Reconstruct the response object expected by node-steamcommunity
+        // Reconstruct response object with lowercased header keys matching request module behavior
         const res = {
             statusCode: response.status,
             headers: Object.fromEntries(response.headers.entries()),
@@ -169,7 +167,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
                 try {
                     body = text ? JSON.parse(text) : null;
                 } catch (e) {
-                    body = text; // Fallback to raw text if parsing fails
+                	body = null; // Set to null on failure so http.js triggers jsonError
                 }
             } else {
                 body = text;
@@ -603,8 +601,3 @@ require('./classes/CMarketSearchResult.js');
 require('./classes/CSteamGroup.js');
 require('./classes/CSteamSharedFile.js');
 require('./classes/CSteamUser.js');
-
-/**
- @callback SteamCommunity~genericErrorCallback
- @param {Error|null} err - An Error object on failure, or null on success
- */
