@@ -68,7 +68,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
 
     // 1. Handle Query Parameters (request's 'qs')
     if (options.qs) {
-        for (const key in options.qs) {
+        for (const key of Object.keys(options.qs)) {
         	if (options.qs[key] !== undefined && options.qs[key] !== null) {
             	url.searchParams.append(key, String(options.qs[key]));
         	}
@@ -110,7 +110,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
     // 4. Handle standard Form URL-Encoded data
     if (options.form) {
         const params = new URLSearchParams();
-        for (const key in options.form) {
+        for (const key of Object.keys(options.form)) {
 			if (![undefined, null, 'undefined', 'null'].includes(options.form[key])) {
 				params.append(key, options.form[key]);
 			}
@@ -121,7 +121,7 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
     // 5. Handle Multipart Form Data (Avatars/Images)
     if (options.formData) {
     	const formData = new FormData();
-        for (const key in options.formData) {
+        for (const key of Object.keys(options.formData)) {
             let item = options.formData[key];
             
             // request module allowed custom file formats: { value: Buffer, options: { filename, contentType } }
