@@ -1,6 +1,6 @@
 const Cheerio = require('cheerio');
 const Crypto = require('crypto');
-const imageSize = require('image-size');
+const { imageSize } = require('image-size');
 const SteamID = require('steamid');
 
 const SteamCommunity = require('../index.js');
