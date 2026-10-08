@@ -111,7 +111,9 @@ SteamCommunity.prototype._httpRequest = async function(options, callback) {
     if (options.form) {
         const params = new URLSearchParams();
         for (const key in options.form) {
-            params.append(key, options.form[key]);
+			if (![undefined, null, 'undefined', 'null'].includes(options.form[key])) {
+				params.append(key, options.form[key]);
+			}
         }
         config.body = params;
     }
